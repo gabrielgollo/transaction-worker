@@ -82,12 +82,11 @@ export default class FundService{
                 logger.warn('Error while handling request to /Account/')
             }
             
-            if(response1.value.status===500 || response1.status ==='rejected') throw new Exception('Failed to get origin account', 500, 'failure')
-            if(response2.value.status===500 || response2.status ==='rejected') throw new Exception('Failed to get destination account', 500, 'failure')
+            if(response1.status ==='rejected' && response1.reason.response?.status ===500) throw new Exception('Failed to get origin account', 500, 'failure')
+            if(response2.status ==='rejected' && response2.reason.response?.status === 500) throw new Exception('Failed to get destination account', 500, 'failure')
 
-            if(response1.value.status !== 200 && response1.status !== 'fullfilled') throw new Exception('Invalid account origin number', 400, 'success')
-            if(response2.value.status !==200 && response2.status !== 'fullfilled') throw new Exception('Invalid account destination number', 400, 'success')
-
+            if(response1.status === 'rejected' && response1?.reason.response.status !== 200) throw new Exception('Invalid account origin number', 400, 'success')
+            if(response2.status === 'rejected' && response2?.reason.response?.status !== 200) throw new Exception('Invalid account destination number', 400, 'success')
 
             FundService.validateIfOriginBalanceHasValue(response1.value.data.balance, value)
 
