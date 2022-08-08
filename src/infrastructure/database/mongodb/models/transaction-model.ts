@@ -11,7 +11,7 @@ class TransactionModel{
     }
 
     static updateStatusById(transactionId: string, status: string, statusMessage?: string){
-        return Transaction.updateOne({_id: transactionId}, { status, statusMessage })
+        return Transaction.updateOne({_id: transactionId}, { status, statusMessage }).exec()
     }
 }
 

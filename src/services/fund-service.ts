@@ -28,20 +28,20 @@ export default class FundService{
             value
         } = TransactionToProcess
 
-        TransactionModel.updateStatusById(transactionId, 'Processing')
+        await TransactionModel.updateStatusById(transactionId, 'Processing')
 
         const { isAccountValid, message: messageFromValidation  } = await FundService.getAccountsAndCheckIfIsValid(TransactionToProcess)
         if(!isAccountValid) throw new Exception(messageFromValidation, 500, 'failure')
 
         const { hasDebitBeenRealized, message: messageFromRequestDebit } = await FundService.requestDebit(accountOrigin, value)
         if(!hasDebitBeenRealized) {
-            TransactionModel.updateStatusById(transactionId, 'Error', messageFromRequestDebit)
+            await TransactionModel.updateStatusById(transactionId, 'Error', messageFromRequestDebit)
             throw new Exception(messageFromRequestDebit, 500, 'failure')
         } 
 
         const { hasCreditBeenAdded } = await FundService.requestCredit(accountDestination, value)
         if(!hasCreditBeenAdded) {
-            TransactionModel.updateStatusById(transactionId, 'Retrying Processing Payment')
+            await TransactionModel.updateStatusById(transactionId, 'Retrying Processing Payment')
             const retryPaymentInfo = {
                 accountDestination,
                 value
@@ -49,7 +49,7 @@ export default class FundService{
             await QueueService.sendToQueue(AMQP_RETRY_PAYMENT_QUEUE, JSON.stringify(retryPaymentInfo))
         } else {
             
-            TransactionModel.updateStatusById(transactionId, 'Confirmed')
+            await TransactionModel.updateStatusById(transactionId, 'Confirmed')
 
         }
         
@@ -82,21 +82,21 @@ export default class FundService{
                 logger.warn('Error while handling request to /Account/')
             }
             
-            if(response1.status===500) throw new Exception('Failed to get origin account', 500, 'failure')
-            if(response2.status===500) throw new Exception('Failed to get destination account', 500, 'failure')
+            if(response1.value.status===500 || response1.status ==='rejected') throw new Exception('Failed to get origin account', 500, 'failure')
+            if(response2.value.status===500 || response2.status ==='rejected') throw new Exception('Failed to get destination account', 500, 'failure')
 
-            if(response1.status !==200) throw new Exception('Invalid account origin number', 400, 'success')
-            if(response2.status !==200) throw new Exception('Invalid account destination number', 400, 'success')
+            if(response1.value.status !== 200 && response1.status !== 'fullfilled') throw new Exception('Invalid account origin number', 400, 'success')
+            if(response2.value.status !==200 && response2.status !== 'fullfilled') throw new Exception('Invalid account destination number', 400, 'success')
 
 
-            FundService.validateIfOriginBalanceHasValue(response1.data.balance, value)
+            FundService.validateIfOriginBalanceHasValue(response1.value.data.balance, value)
 
             return {
                 isAccountValid: true,
                 message: "Success!",
                 accountData: {
-                    accoutOriginData: response1.data,
-                    accountDestinationData: response2.data
+                    accoutOriginData: response1.value.data,
+                    accountDestinationData: response2.value.data
                 }
             }
         } catch (error: any) {
@@ -107,7 +107,7 @@ export default class FundService{
                     accountData: {}
                 }
             } else if (error.shoudlAck === 'success') {
-                TransactionModel.updateStatusById(transactionId, 'Error', error.message)
+                await TransactionModel.updateStatusById(transactionId, 'Error', error.message)
             }
 
             throw new Exception(error.message, error.statusCode, 'success')
