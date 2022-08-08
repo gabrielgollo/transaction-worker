@@ -51,7 +51,7 @@ class RabbitMqService{
         await new Promise((resolve) => setTimeout(resolve, Number(RETRY_MESSAGE_TIMEOUT || 1000)))
     }
 
-    public async startConsuming(_callback: (msg: string) => Promise<any>){
+    public async startConsuming(_callback: (msg: string) => Promise<any>, logger=console){
         await this.getOrCreateConnection();
         const channel:Channel = await this.createChannel(AMQP_INCOMING_QUEUE as string);
         channel.prefetch(1);
@@ -71,7 +71,7 @@ class RabbitMqService{
                     
                     const timeAfterProcess = new Date();
                     const timeDiff = timeAfterProcess.getTime() - timeOfReceived.getTime();
-                    console.log(`[RabbitMqService] -- Message processed in ${timeDiff} ms`);
+                    logger.info(`[RabbitMqService] -- Message processed in ${timeDiff} ms`);
                 }
             }
 

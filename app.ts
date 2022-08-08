@@ -14,12 +14,12 @@ import AppController from './src/controller/app-controller';
 logger.info('Worker has been initialized!')
 const processMsg = async (transactionId: string) => {
   try {
-    logger.info(`${new Date()}-- Received message --}`);
+    const startTime = new Date()
+    logger.info(`${new Date()}-- Received message --`);
   
 
-    const controllerResponse = await AppController.processMessage(transactionId);
+    const controllerResponse = await AppController.processMessage(transactionId, startTime);
     
-    logger.info(`${new Date()}-- Message Processed --`);
     return controllerResponse;
   } catch (error) {
     logger.error(error)
